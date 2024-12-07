@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qiita Tags</title>
+</head>
+<body>
+    <h1>Qiita Tags</h1>
+    <p>検索するタグを選んで検索すると、一番上に検索したタグと検索件数が表示されます。その下の20件がランキングになります</p>
+    <input type="text" id="search-box" placeholder="検索タグを入力してください">
+    <button id="search-button">検索</button>
+    <ul id="tag-list"></ul>
+
+    <script>
+        // Qiitaのタグを取得する関数
+        async function getQiitaTags(tag) {
+            const url = `https://qiita.com/api/v2/tags/${tag}/items`;
+            const params = { per_page: 100 };
+
+            try {
+                const response = await fetch(`${url}?per_page=${params.per_page}`);
+                const items = await response.json();
+                const tags = items.map(item => item.tags);
+                return tags;
+            } catch (error) {
+                console.error('Error fetching Qiita tags:', error);
+                return [];
+            }
+        }
+
+        // タグを数える関数
+        function countTags(tagList) {
+            const tagCounter = {};
+
+            for (const pageTags of tagList) {
+                for (const tag of pageTags) {
+                    const tagName = tag.name;
+                    if (!tagCounter[tagName]) {
+                        tagCounter[tagName] = 0;
+                    }
+                    tagCounter[tagName] += 1;
+                }
+            }
+
+            return tagCounter;
+        }
+
+        // タグの上位20個を表示する関数
+        function displayTopTags(tagCounter) {
+            const sortedTags = Object.entries(tagCounter).sort((a, b) => b[1] - a[1]);
+            const topTwentyTags = sortedTags.slice(0, 21);
+            const tagList = document.getElementById('tag-list');
+            tagList.innerHTML = '';  // 前回の検索結果をクリア
+
+            for (const [tag, count] of topTwentyTags) {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${tag}: ${count}`;
+                tagList.appendChild(listItem);
+            }
+        }
+
+        // メイン関数
+        async function main(tag) {
+            const allTags = await getQiitaTags(tag);
+            const tagCounter = countTags(allTags);
+            displayTopTags(tagCounter);
+        }
+
+        // イベントリスナーを追加
+        document.getElementById('search-button').addEventListener('click', () => {
+            const tag = document.getElementById('search-box').value;
+            if (tag) {
+                main(tag);
+            }
+        });
+    </script>
+</body>
+</html>
