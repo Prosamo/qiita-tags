@@ -7,22 +7,32 @@
 </head>
 <body>
     <h1>Qiita Tags</h1>
-    <p>検索するタグを選んで検索すると、一番上に検索したタグと検索件数が表示されます。その下の20件がランキングになります</p>
+    <p>検索するタグを選んで検索すると、一番上に検索したタグと検索件数が表示されます。その下の50件がランキングになります。検索件数は1～1000件としています</p>
     <input type="text" id="search-box" placeholder="検索タグを入力してください">
+    <input type="number" id="result-count" placeholder="検索件数を入力してください" min="1" max="1000">
     <button id="search-button">検索</button>
+    <p id="loading-message" style="display: none;">検索中...</p>
     <ul id="tag-list"></ul>
 
     <script>
         // Qiitaのタグを取得する関数
-        async function getQiitaTags(tag) {
+        async function getQiitaTags(tag, count) {
             const url = `https://qiita.com/api/v2/tags/${tag}/items`;
             const params = { per_page: 100 };
+            let page = 1;
+            let allTags = [];
 
             try {
-                const response = await fetch(`${url}?per_page=${params.per_page}`);
-                const items = await response.json();
-                const tags = items.map(item => item.tags);
-                return tags;
+                while (allTags.length < count) {
+                    const response = await fetch(`${url}?page=${page}&per_page=${params.per_page}`);
+                    if (!response.ok) break;
+                    const items = await response.json();
+                    if (items.length === 0) break;
+                    const tags = items.map(item => item.tags);
+                    allTags = allTags.concat(tags);
+                    page++;
+                }
+                return allTags.slice(0, count);
             } catch (error) {
                 console.error('Error fetching Qiita tags:', error);
                 return [];
@@ -49,7 +59,7 @@
         // タグの上位20個を表示する関数
         function displayTopTags(tagCounter) {
             const sortedTags = Object.entries(tagCounter).sort((a, b) => b[1] - a[1]);
-            const topTwentyTags = sortedTags.slice(0, 21);
+            const topTwentyTags = sortedTags.slice(0, 51);
             const tagList = document.getElementById('tag-list');
             tagList.innerHTML = '';  // 前回の検索結果をクリア
 
@@ -61,8 +71,14 @@
         }
 
         // メイン関数
-        async function main(tag) {
-            const allTags = await getQiitaTags(tag);
+        async function main(tag, count) {
+            document.getElementById('loading-message').style.display = 'block';
+            const allTags = await getQiitaTags(tag, count);
+            document.getElementById('loading-message').style.display = 'none';
+            if (allTags.length === 0) {
+                alert('タグが見つかりませんでした。');
+                return;
+            }
             const tagCounter = countTags(allTags);
             displayTopTags(tagCounter);
         }
@@ -70,8 +86,9 @@
         // イベントリスナーを追加
         document.getElementById('search-button').addEventListener('click', () => {
             const tag = document.getElementById('search-box').value;
-            if (tag) {
-                main(tag);
+            const count = parseInt(document.getElementById('result-count').value, 10);
+            if (tag && count) {
+                main(tag, count);
             }
         });
     </script>
