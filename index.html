@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Qiita Tags</title>
+    <style>
+        #loading-message {
+            display: none;
+            font-weight: bold;
+            color: blue;
+        }
+        a {
+            color: black;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <h1><span style="background-color:#66dd00; color:#ffffff; padding:5px">Qiita Tags</span></h1>
@@ -11,11 +25,10 @@
     <input type="text" id="search-box" placeholder="検索タグを入力してください">
     <input type="number" id="result-count" placeholder="検索件数を入力してください" min="1" max="1000">
     <button id="search-button">検索</button>
-    <p id="loading-message" style="display: none;">検索中...</p>
+    <p id="loading-message">検索中...</p>
     <ul id="tag-list"></ul>
 
     <script>
-        // Qiitaのタグを取得する関数
         async function getQiitaTags(tag, count) {
             const url = `https://qiita.com/api/v2/tags/${tag}/items`;
             const params = { per_page: 100 };
@@ -25,7 +38,7 @@
             try {
                 while (allTags.length < count) {
                     const response = await fetch(`${url}?page=${page}&per_page=${params.per_page}`);
-                    if (!response.ok) break;
+                    if (!response.ok) throw new Error('API request failed');
                     const items = await response.json();
                     if (items.length === 0) break;
                     const tags = items.map(item => item.tags);
@@ -35,11 +48,11 @@
                 return allTags.slice(0, count);
             } catch (error) {
                 console.error('Error fetching Qiita tags:', error);
+                alert('タグの取得に失敗しました。もう一度お試しください。');
                 return [];
             }
         }
 
-        // タグを数える関数
         function countTags(tagList) {
             const tagCounter = {};
 
@@ -56,21 +69,23 @@
             return tagCounter;
         }
 
-        // タグの上位20個を表示する関数
         function displayTopTags(tagCounter) {
             const sortedTags = Object.entries(tagCounter).sort((a, b) => b[1] - a[1]);
             const topTwentyTags = sortedTags.slice(0, 51);
             const tagList = document.getElementById('tag-list');
-            tagList.innerHTML = '';  // 前回の検索結果をクリア
+            tagList.innerHTML = '';  // Clear previous results
 
             for (const [tag, count] of topTwentyTags) {
                 const listItem = document.createElement('li');
-                listItem.textContent = `${tag}: ${count}`;
+                const link = document.createElement('a');
+                link.href = `https://qiita.com/tags/${tag}`;
+                link.textContent = `${tag}: ${count}`;
+                link.target = "_blank";  // Open in a new tab
+                listItem.appendChild(link);
                 tagList.appendChild(listItem);
             }
         }
 
-        // メイン関数
         async function main(tag, count) {
             document.getElementById('loading-message').style.display = 'block';
             const allTags = await getQiitaTags(tag, count);
@@ -83,12 +98,16 @@
             displayTopTags(tagCounter);
         }
 
-        // イベントリスナーを追加
         document.getElementById('search-button').addEventListener('click', () => {
             const tag = document.getElementById('search-box').value;
-            const count = parseInt(document.getElementById('result-count').value, 10);
+            let count = parseInt(document.getElementById('result-count').value, 10);
             if (tag && count) {
+                if (count > 1000) {
+                    count = 1000;
+                }
                 main(tag, count);
+            } else {
+                alert('有効なタグと検索件数を入力してください。');
             }
         });
     </script>
