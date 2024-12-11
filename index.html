@@ -80,7 +80,8 @@
             for (const [tag, count] of topTwentyTags) {
                 const listItem = document.createElement('li');
                 const link = document.createElement('a');
-                link.href = `https://qiita.com/tags/${tag}`;
+                const searchtag = document.getElementById('search-box').value;
+                link.href = `https://qiita.com/search?q=${searchtag}+${tag}`;
                 link.textContent = `${tag}: ${count}`;
                 link.target = "_blank";  // Open in a new tab
                 listItem.appendChild(link);
